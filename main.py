@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
@@ -36,6 +37,8 @@ from utils.display import (
     print_intent_table,
     score_badge,
 )
+
+load_dotenv()
 
 # Ensure output directory exists
 OUTPUT_DIR = Path("output")
