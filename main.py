@@ -389,9 +389,9 @@ def _display_copy(copy) -> None:
 def run(company: str, quiet: bool) -> None:
     """Full pipeline: research → leads → intent → copy for the top lead."""
     check_api_key()
-    from agents.account_researcher import research_account
-    from agents.lead_finder import find_leads
-    from agents.intent_scorer import score_intent
+    from agents.account_researcher import research_account, AccountProfile
+    from agents.lead_finder import find_leads, LeadList
+    from agents.intent_scorer import score_intent, IntentReport
     from agents.copy_generator import generate_copy
 
     header(
@@ -399,20 +399,37 @@ def run(company: str, quiet: bool) -> None:
         f"Complete account intelligence + outreach copy for {company}",
     )
 
+    slug = company.lower().replace(" ", "_").replace("/", "_")
+
     # 1. Account research
     console.print("\n[bold blue]Step 1/4 — Account Research[/bold blue]\n")
-    profile = research_account(company, verbose=not quiet)
-    save_output(company, "research", profile.model_dump())
+    research_cache = OUTPUT_DIR / f"{slug}_research.json"
+    if research_cache.exists():
+        profile = AccountProfile(**json.loads(research_cache.read_text()))
+        info(f"Loaded cached research from {research_cache}")
+    else:
+        profile = research_account(company, verbose=not quiet)
+        save_output(company, "research", profile.model_dump())
 
     # 2. Leads
     console.print("\n[bold blue]Step 2/4 — Lead Discovery[/bold blue]\n")
-    lead_list = find_leads(company, profile, verbose=not quiet)
-    save_output(company, "leads", lead_list.model_dump())
+    leads_cache = OUTPUT_DIR / f"{slug}_leads.json"
+    if leads_cache.exists():
+        lead_list = LeadList(**json.loads(leads_cache.read_text()))
+        info(f"Loaded cached leads from {leads_cache}")
+    else:
+        lead_list = find_leads(company, profile, verbose=not quiet)
+        save_output(company, "leads", lead_list.model_dump())
 
     # 3. Intent
     console.print("\n[bold blue]Step 3/4 — Intent Scoring[/bold blue]\n")
-    intent_report = score_intent(company, profile, verbose=not quiet)
-    save_output(company, "intent", intent_report.model_dump())
+    intent_cache = OUTPUT_DIR / f"{slug}_intent.json"
+    if intent_cache.exists():
+        intent_report = IntentReport(**json.loads(intent_cache.read_text()))
+        info(f"Loaded cached intent from {intent_cache}")
+    else:
+        intent_report = score_intent(company, profile, verbose=not quiet)
+        save_output(company, "intent", intent_report.model_dump())
 
     # 4. Copy for the highest-priority lead
     console.print("\n[bold blue]Step 4/4 — Outreach Copy[/bold blue]\n")

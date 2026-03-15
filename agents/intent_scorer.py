@@ -40,62 +40,29 @@ class IntentReport(BaseModel):
     recommended_hook: str               # the most compelling opening hook to use
 
 
-SYSTEM_PROMPT = f"""{TRUMPET_CONTEXT}
+SYSTEM_PROMPT = """You are a sales intelligence assistant for Trumpet (sendtrumpet.com), a B2B Digital Sales Room platform.
 
-Your job is to find buying intent signals — evidence that a company is likely
-to need or be actively looking for a Digital Sales Room (DSR) like Trumpet.
+Your job is to find buying intent signals for a target company. Use web_search and web_fetch to search for:
+1. JOB POSTINGS — Sales Enablement, RevOps, Sales Excellence, AE/SDR hiring
+2. LEADERSHIP CHANGES — new CRO/VP Sales in last 12 months
+3. FUNDING EVENTS — recent investment rounds
+4. COMPETITOR SIGNALS — using/evaluating Qwilr, Aligned, GetAccept, DealRoom
+5. PUBLIC PAIN POINTS — posts/blogs about sales process challenges or proposal inefficiency
+6. GROWTH SIGNALS — new markets, M&A, rapid headcount expansion
 
-Use web_search and web_fetch to search for:
-
-1. JOB POSTINGS — search their current open roles for:
-   - "Sales Enablement", "Revenue Operations", "RevOps", "Sales Excellence"
-   - "Sales Cycle", "Deal Management", "Buyer Experience"
-   - These indicate they're actively investing in sales process
-
-2. LEADERSHIP CHANGES — new CRO, VP Sales, Head of Sales in the last 12 months
-   (new leaders often bring in new tools in their first 90 days)
-
-3. FUNDING EVENTS — recent investment rounds (they'll be scaling the sales team)
-
-4. HIRING SIGNALS — lots of AE / SDR / BDR hiring (growing sales team = more complexity)
-
-5. COMPETITOR SIGNALS — are they using or evaluating Qwilr, Aligned, GetAccept,
-   DealRoom, or similar tools? (reviews on G2, LinkedIn posts, job listings)
-
-6. PUBLIC PAIN POINTS — LinkedIn posts, blog posts, podcast interviews where
-   leadership or AEs talk about sales process challenges, buyer experience,
-   deal stalling, or proposal inefficiency
-
-7. COMPANY GROWTH SIGNALS — expansion into new markets, new product lines,
-   M&A activity (all create sales complexity)
-
-8. CONTENT SIGNALS — white papers, webinars, or events they run about
-   sales excellence, revenue growth, or GTM strategy
-
-After researching, output a JSON object matching this schema:
-{{
+Output ONLY a JSON object (no markdown):
+{
   "company_name": "string",
   "intent_score": integer (0-100),
-  "score_rationale": "string (2-3 sentences explaining the score)",
-  "signals": [
-    {{
-      "signal": "string (short label)",
-      "strength": "high | medium | low",
-      "evidence": "string (what you found, with detail)",
-      "source_url": "string (if available)"
-    }}
-  ],
-  "timing_assessment": "string (is now a good time? specific reason why)",
-  "competitor_signals": ["string", ...],
-  "trigger_events": ["string (specific event + date if known)", ...],
-  "recommended_hook": "string (the single most compelling opening hook based on signals)"
-}}
+  "score_rationale": "string",
+  "signals": [{"signal": "string", "strength": "high|medium|low", "evidence": "string", "source_url": "string"}],
+  "timing_assessment": "string",
+  "competitor_signals": ["string"],
+  "trigger_events": ["string"],
+  "recommended_hook": "string"
+}
 
-Score high (75+) when you find: leadership changes + funding + active hiring.
-Score medium (40-60) when you find: general growth signals + relevant industry.
-Score low (<25) when there are no clear intent signals.
-
-Output ONLY the JSON, no markdown fences.
+Score 75+ for: leadership change + funding + active hiring. Score 40-60 for general growth. Score <25 for no signals.
 """
 
 
@@ -140,7 +107,6 @@ Company context:
         with client.messages.stream(
             model=MODEL,
             max_tokens=6000,
-            thinking={"type": "adaptive"},
             system=SYSTEM_PROMPT,
             tools=RESEARCH_TOOLS,
             messages=messages,
@@ -157,7 +123,7 @@ Company context:
 
         if response.stop_reason == "end_turn":
             for block in response.content:
-                if hasattr(block, "text"):
+                if getattr(block, "type", None) == "text" and block.text:
                     raw_json = block.text.strip()
             break
 

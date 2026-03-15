@@ -35,7 +35,7 @@ class LeadList(BaseModel):
     outreach_strategy: str           # who to contact first and why
 
 
-SYSTEM_PROMPT = f"""{TRUMPET_CONTEXT}
+SYSTEM_PROMPT = f"""You are a sales intelligence assistant for Trumpet (sendtrumpet.com), a B2B Digital Sales Room platform. Target personas: VP Sales, CRO, Sales Enablement Manager, RevOps Lead, Head of GTM, Senior AEs.
 
 Your job is to identify the best people to contact at a target company for
 Trumpet outreach. Use web_search and web_fetch to find real people.
@@ -127,7 +127,6 @@ Company context already researched:
         with client.messages.stream(
             model=MODEL,
             max_tokens=6000,
-            thinking={"type": "adaptive"},
             system=SYSTEM_PROMPT,
             tools=RESEARCH_TOOLS,
             messages=messages,
@@ -146,7 +145,7 @@ Company context already researched:
 
         if response.stop_reason == "end_turn":
             for block in response.content:
-                if hasattr(block, "text"):
+                if getattr(block, "type", None) == "text" and block.text:
                     raw_json = block.text.strip()
             break
 

@@ -35,7 +35,10 @@ class AccountProfile(BaseModel):
     recommended_angle: str = ""       # the hook/angle to lead with
 
 
-SYSTEM_PROMPT = f"""{TRUMPET_CONTEXT}
+SYSTEM_PROMPT = f"""You are a sales intelligence assistant for Trumpet (sendtrumpet.com), a B2B Digital Sales Room (DSR) platform that helps sales teams close deals faster with personalised microsites.
+
+Trumpet ICP: B2B SaaS, Professional Services, complex multi-stakeholder sales, 30+ day cycles, 5-500 AEs.
+Buying signals: Sales Enablement/RevOps hiring, new VP Sales/CRO, recent funding, 3+ decision makers, demo-driven sales.
 
 Your job is to deeply research a target company so a Trumpet sales rep can
 craft highly personalised outreach.
@@ -94,7 +97,6 @@ def research_account(company: str, verbose: bool = True) -> AccountProfile:
         with client.messages.stream(
             model=MODEL,
             max_tokens=8000,
-            thinking={"type": "adaptive"},
             system=SYSTEM_PROMPT,
             tools=RESEARCH_TOOLS,
             messages=messages,
@@ -115,7 +117,7 @@ def research_account(company: str, verbose: bool = True) -> AccountProfile:
         if response.stop_reason == "end_turn":
             # Extract the JSON the model wrote
             for block in response.content:
-                if hasattr(block, "text"):
+                if getattr(block, "type", None) == "text" and block.text:
                     raw_json = block.text.strip()
             break
 
